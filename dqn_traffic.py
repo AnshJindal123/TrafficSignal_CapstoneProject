@@ -17,16 +17,16 @@ if 'SUMO_HOME' in os.environ:
 else:
     sys.exit("SUMO_HOME not set")
 
-SUMO_CMD_RECORD = ["sumo", "-c", "junction.sumocfg",
+SUMO_CMD_RECORD = ["sumo", "-c", "map.sumocfg",
             "--tripinfo-output", "after_tripinfo.xml",
             "--summary", "after_summary.xml",
             "--queue-output", "after_queue.xml",
             "--no-step-log", "--duration-log.disable"]
-SUMO_CMD_QUIET = ["sumo", "-c", "junction.sumocfg",
+SUMO_CMD_QUIET = ["sumo", "-c", "map.sumocfg",
             "--no-step-log", "--duration-log.disable"]
 
 # Main junction on the new map (highest-degree signalised cluster)
-TLS_ID = "cluster_11594569878_11909580134_3352035441_6901551440"
+TLS_ID = "cluster_11801662689_12136946746_12136946747_12136946748_#3more"
 GREEN_PHASES = [0, 2]
 
 # ------------------------
@@ -206,7 +206,7 @@ def run_episode(episode_idx, record_output=False):
     traci.start(cmd)
 
     step = 0
-    while traci.simulation.getTime() < 3600:
+    while traci.simulation.getTime() < 1000:
 
         state = get_state()
         action = choose_action(state)
