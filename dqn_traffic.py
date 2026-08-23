@@ -26,7 +26,7 @@ SUMO_CMD_QUIET = ["sumo", "-c", "junction.sumocfg",
             "--no-step-log", "--duration-log.disable"]
 
 # Main junction on the new map (highest-degree signalised cluster)
-TLS_ID = "cluster_11594569878_11909580134_3352035441_6901551440"
+TLS_ID = "11338711006"
 GREEN_PHASES = [0, 2]
 
 # ------------------------
@@ -147,21 +147,34 @@ def apply_action(action):
 
     current = traci.trafficlight.getPhase(TLS_ID)
 
-    if current != action:
-        yellow_phase = current + 1
-        traci.trafficlight.setPhase(TLS_ID, yellow_phase)
+    # If already on the requested phase, just continue it
+    if current == action:
+        traci.trafficlight.setPhase(TLS_ID, action)
+
+        for _ in range(5):
+            traci.simulationStep()
+            phase_time += 1
+
+        return
+
+    # Phase 1 is the yellow phase for this junction
+    YELLOW_PHASE = 1
+
+    # Switch through yellow before changing to the requested phase
+    if current != YELLOW_PHASE:
+        traci.trafficlight.setPhase(TLS_ID, YELLOW_PHASE)
 
         for _ in range(5):
             traci.simulationStep()
 
-        current_phase = action
-        phase_time = 0
+    # Now switch to the requested phase
+    current_phase = action
+    phase_time = 0
 
     traci.trafficlight.setPhase(TLS_ID, action)
 
     for _ in range(5):
         traci.simulationStep()
-        phase_time += 1
 
 # ------------------------
 # Training step
