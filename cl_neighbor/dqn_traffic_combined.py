@@ -402,7 +402,7 @@ class SingleJunctionAgent:
     def __init__(self, tls_id, green_phases, lane_groups,
                  queue_weight=0.01, wait_weight=0.001, queue_power=1,
                  epsilon_decay=epsilon_decay, delta_weight=0.02,
-                 neighbor_specs=None):
+                 neighbor_specs=None, hidden_size=None):
         self.tls_id = tls_id
         self.green_phases = green_phases
         self.lane_groups = lane_groups
@@ -449,6 +449,12 @@ class SingleJunctionAgent:
         else:
             self.state_size = self.n_actions + 1 + self.n_neighbors
             self.hidden_size = 64
+        # Optional override (used by federated_regional.py so every node in
+        # a region has the same hidden width and its hidden->hidden layer is
+        # shape-compatible for aggregation). None keeps the per-mode default
+        # above, so every existing script/checkpoint is unaffected.
+        if hidden_size is not None:
+            self.hidden_size = hidden_size
 
         self.policy_net = DQN(self.n_actions, self.state_size, self.hidden_size)
         self.target_net = DQN(self.n_actions, self.state_size, self.hidden_size)

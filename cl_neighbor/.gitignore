@@ -5,3 +5,11 @@ __pycache__/
 # SUMO generated outputs
 before_*.xml
 seq_after_*.xml
+fl_eval_*.xml
+regional_model_*.pt
+dqn_policy_fl_*.pt
+dqn_policy_independent_*.pt
+train_independent*.log
+train_fl*.log
+ms_logs/
+ms_eval_tmp/
