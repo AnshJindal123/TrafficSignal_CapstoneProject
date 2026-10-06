@@ -1,0 +1,12 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# SUMO generated outputs
+before_*.xml
+seq_after_*.xml
+fair_*_tripinfo.xml
+fair_*_summary.xml
+
+# Federated training resume state (replay memories, regenerable)
+fed_*checkpoint.pt

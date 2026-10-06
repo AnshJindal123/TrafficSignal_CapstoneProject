@@ -1,0 +1,5 @@
+=== SIMULTANEOUS (all 8 live) - canonical vs fedglobal_mix ===
+   canonical  network wait  15.61%  travel   6.01%  loss  10.06%
+              queue% 1213632636:75.1  343322679:16.2  442107275:0.0  481750173:36.4  GS_cluster:65.4  #4more:-1.0  cluster_11594569878:60.9  #3more:68.5
+fedglobal_mix  network wait   9.78%  travel   1.07%  loss   3.89%
+              queue% 1213632636:59.3  343322679:39.7  442107275:0.0  481750173:27.3  GS_cluster:60.8  #4more:-3.7  cluster_11594569878:58.5  #3more:56.4

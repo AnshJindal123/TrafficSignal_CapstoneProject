@@ -1,0 +1,24 @@
+=== SOLO (one junction live, 7 fixed-time bystanders) - canonical vs fedgrp_ ===
+Junction                              Wait%  Travel%    Loss%   Queue%
+1213632636               canonical    8.79%    0.01%    2.95%   78.03%
+1213632636                 fedgrp_   -1.97%   -3.25%   -2.96%   25.13%
+343322679                canonical   16.36%    5.14%   10.06%   43.03%
+343322679                  fedgrp_   10.47%    0.75%    4.27%   28.54%
+442107275                canonical    3.67%   -1.80%   -0.03%    0.00%
+442107275                  fedgrp_    3.67%   -1.80%   -0.03%    0.00%
+481750173                canonical    1.31%   -3.10%   -1.40%   50.00%
+481750173                  fedgrp_   -3.91%   -4.40%   -4.37%   72.73%
+GS_cluster               canonical   -7.05%   -8.05%   -8.97%   63.10%
+GS_cluster                 fedgrp_   16.34%    6.34%   10.58%   49.87%
+#4more                   canonical    7.72%    1.24%    3.36%    1.03%
+#4more                     fedgrp_    1.32%   -3.48%   -2.25%   -5.45%
+cluster_11594569878      canonical    1.89%   -3.07%   -1.77%   63.40%
+cluster_11594569878        fedgrp_    2.27%   -2.86%   -1.14%   60.00%
+#3more                   canonical    5.41%   -1.40%    0.27%   28.72%
+#3more                     fedgrp_   11.46%    3.15%    7.07%   19.84%
+
+=== SIMULTANEOUS (all 8 live) - canonical vs fedgrp_ ===
+   canonical  network wait  15.61%  travel   6.01%  loss  10.06%
+              queue% 1213632636:75.1  343322679:16.2  442107275:0.0  481750173:36.4  GS_cluster:65.4  #4more:-1.0  cluster_11594569878:60.9  #3more:68.5
+     fedgrp_  network wait   5.47%  travel   0.99%  loss   2.63%
+              queue% 1213632636:24.9  343322679:14.0  442107275:0.0  481750173:72.7  GS_cluster:49.1  #4more:7.3  cluster_11594569878:51.7  #3more:-254.6

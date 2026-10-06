@@ -1,0 +1,16 @@
+=== FAIR COMPARISON - every vehicle scheduled in the hour counted ===
+  wait  = avg time stopped in traffic, all vehicles (finished + still on road + never entered)
+  delay = wait + time spent waiting to enter the road (departDelay) - total time lost queueing
+  loss  = avg timeLoss vs free-flow, all vehicles that entered
+
+Run                             vehicles  finished  on road  never in   wait s       %   delay s       %   loss s       %
+Baseline (fixed-time)               7086      4911     2084        91    489.3    0.0%     538.6    0.0%    543.1    0.0%
+Milestone (per-junction DQN)        7086      5373     1639        74    378.7   22.6%     426.0   20.9%    435.3   19.8%
+FL: FedAvg global                   7086      5510     1512        64    373.0   23.8%     419.4   22.1%    427.5   21.3%
+FedAvg + milestone #3more           7086      5548     1476        62    351.4   28.2%     400.2   25.7%    407.2   25.0%
+
+=== SANITY CHECK - finished trips only (must equal the old evaluation) ===
+Baseline (fixed-time)            4911 finished, avg wait 217.5s
+Milestone (per-junction DQN)     5373 finished, avg wait 183.5s
+FL: FedAvg global                5510 finished, avg wait 188.0s
+FedAvg + milestone #3more        5548 finished, avg wait 196.2s

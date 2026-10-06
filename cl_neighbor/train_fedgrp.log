@@ -1,0 +1,15 @@
+### Grouped heads (hidden layers shared, output layer shared within phase-count groups: 2-phase x6, 3-phase x1, 5-phase x1): rounds=10 local_episodes=3 personalize_episodes=0 clients=8 state_size=24 max_actions=5 eps_decay=0.999792 tag='grp_' ###
+Round 1/10 done in 12.3 min | epsilon=0.689 | last-episode reward per client: 1213632636:-8  343322679:-1849  442107275:-0  481750173:-0  GS_cluster:-10  #4more:-1527  cluster_11594569878:-19  #3more:-3589
+Round 2/10 done in 13.0 min | epsilon=0.474 | last-episode reward per client: 1213632636:-8  343322679:-1180  442107275:-0  481750173:-0  GS_cluster:-10  #4more:-1699  cluster_11594569878:-20  #3more:-698
+Round 3/10 done in 13.5 min | epsilon=0.325 | last-episode reward per client: 1213632636:-5  343322679:-1929  442107275:0  481750173:-0  GS_cluster:-5  #4more:-1798  cluster_11594569878:-14  #3more:-714
+Round 4/10 done in 13.4 min | epsilon=0.221 | last-episode reward per client: 1213632636:-6  343322679:-715  442107275:-0  481750173:-0  GS_cluster:-5  #4more:-1553  cluster_11594569878:-13  #3more:-487
+Resuming from fed_grp_checkpoint.pt: 4/10 rounds already done
+### Grouped heads (hidden layers shared, output layer shared within phase-count groups: 2-phase x6, 3-phase x1, 5-phase x1): rounds=10 local_episodes=3 personalize_episodes=0 clients=8 state_size=24 max_actions=5 eps_decay=0.999792 tag='grp_' ###
+Round 5/10 done in 12.1 min | epsilon=0.150 | last-episode reward per client: 1213632636:-6  343322679:-1658  442107275:-0  481750173:-0  GS_cluster:-6  #4more:-1694  cluster_11594569878:-10  #3more:-2831
+Round 6/10 done in 12.2 min | epsilon=0.102 | last-episode reward per client: 1213632636:-5  343322679:-981  442107275:0  481750173:-0  GS_cluster:-4  #4more:-1472  cluster_11594569878:-13  #3more:-3501
+Round 7/10 done in 12.8 min | epsilon=0.069 | last-episode reward per client: 1213632636:-4  343322679:-2252  442107275:-0  481750173:-0  GS_cluster:-4  #4more:-1778  cluster_11594569878:-13  #3more:-1395
+Round 8/10 done in 12.8 min | epsilon=0.050 | last-episode reward per client: 1213632636:-5  343322679:-2445  442107275:-0  481750173:-0  GS_cluster:-4  #4more:-1520  cluster_11594569878:-16  #3more:-2179
+Round 9/10 done in 12.9 min | epsilon=0.050 | last-episode reward per client: 1213632636:-5  343322679:-1765  442107275:-0  481750173:-0  GS_cluster:-3  #4more:-1753  cluster_11594569878:-14  #3more:-1124
+Round 10/10 done in 12.9 min | epsilon=0.050 | last-episode reward per client: 1213632636:-4  343322679:-957  442107275:0  481750173:-0  GS_cluster:-5  #4more:-1631  cluster_11594569878:-18  #3more:-1095
+Saved per-junction models -> dqn_policy_fed_grp_<tls>.pt
+=== train_federated.py finished ===
