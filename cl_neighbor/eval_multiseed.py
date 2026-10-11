@@ -28,12 +28,16 @@ def main():
     os.makedirs(OUT_RES, exist_ok=True)
     config = m.discover_controllable_tls()
     topology = nt.discover_neighbor_inflows(config)
-    for mode in ef.MODES:
-        tag = f"t{fr.TRAIN_SEED}_e{fr.EVAL_SEED}_{mode}"
+    modes = os.environ.get("MS_MODES", ",".join(ef.MODES)).split(",")
+    for mode in modes:
+        canonical = (mode == "canonical")
+        label = mode if canonical else mode + fr.DESIGN_TAG   # e.g. fl, fl_u
+        tag = (f"canonical_e{fr.EVAL_SEED}" if canonical
+               else f"t{fr.TRAIN_SEED}_e{fr.EVAL_SEED}_{label}")
         res_path = f"{OUT_RES}/{tag}.json"
         if os.path.exists(res_path):
             continue
-        runners = fr.build_runners(config, topology, 1)
+        runners = fr.build_runners(config, topology, 1, design="canonical" if canonical else None)
         for tls_id, r in runners.items():
             r.agent.policy_net.load_state_dict(
                 torch.load(fr.ckpt_name(mode, tls_id), weights_only=True))
@@ -42,7 +46,7 @@ def main():
         fr.run_episode(runners, config, learn=False, sumo_extra=[
             "--tripinfo-output", paths["tripinfo"], "--summary", paths["summary"],
             "--queue-output", paths["queue"]])
-        out = {"train_seed": fr.TRAIN_SEED, "eval_seed": fr.EVAL_SEED, "mode": mode,
+        out = {"train_seed": 0 if canonical else fr.TRAIN_SEED, "eval_seed": fr.EVAL_SEED, "mode": label,
                **ef.trip_metrics(paths["tripinfo"]), **ef.summary_metrics(paths["summary"]),
                "queue": {t: ef.junction_queue(paths["queue"], ef.controlled_lanes(t))
                          for t in config}}

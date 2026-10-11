@@ -524,6 +524,13 @@ class SingleJunctionAgent:
         self.prev_queue = queue
         return base + shaping
 
+    def _queues_from_state(self, state):
+        # Hook so a subclass with a different state layout (see
+        # unified_dqn.py) can reuse choose_action's heuristics unchanged.
+        if self.use_richer_state:
+            return [state[i * 4] for i in range(self.n_actions)]
+        return state[:self.n_actions]
+
     def choose_action(self, state):
         # Thin state is [queue_per_phase..., phase_index]; richer state is
         # [queue,wait,speed,trend] per phase then [phase_index,
@@ -532,10 +539,7 @@ class SingleJunctionAgent:
         # MIN_IMBALANCE's calibration is unaffected by which mode this
         # junction uses (now read from self.min_imbalance/self.imbalance_ratio,
         # set per-junction via IMBALANCE_OVERRIDES - same reasoning still applies).
-        if self.use_richer_state:
-            queues = [state[i * 4] for i in range(self.n_actions)]
-        else:
-            queues = state[:self.n_actions]
+        queues = self._queues_from_state(state)
         current_idx = self.green_phases.index(self.current_phase)
 
         # Fairness bound: no phase WITH ACTUAL DEMAND should wait longer

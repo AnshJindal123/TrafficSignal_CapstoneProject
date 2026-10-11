@@ -1,62 +1,90 @@
 """
-Summarises ms_results/*.json (from eval_multiseed.py): how much of the
-FL-vs-independent comparison is evaluation noise vs training-seed variation.
+Summarises ms_results/*.json (from eval_multiseed.py). Model labels:
+  independent / fl / fl_preagg      current design (per-junction shapes)
+  independent_u / fl_u / fl_preagg_u unified-interface design
+  canonical                          original per-junction checkpoints (train_seed 0)
+Every model is evaluated on the same eval seeds, so comparisons are PAIRED by
+eval seed. Differences are reported in the metric's own units
+(negative = first model lower; lower is better for wait/travel/loss/teleports,
+higher is better for trips).
+
 Usage: python summarize_multiseed.py
 """
 import glob
 import json
+import math
 import statistics as st
 from collections import defaultdict
 
 METRICS = ["wait", "travel", "loss", "teleports", "trips"]
-data = defaultdict(dict)   # (mode, train_seed) -> {eval_seed: result}
+BUSY = {"343322679": "343322679", "cluster_10291078963": "#4more",
+        "cluster_11801662689": "#3more", "cluster_11594569878": "cl_1159"}
+
+data = defaultdict(dict)   # (label, train_seed) -> {eval_seed: result}
 for f in glob.glob("ms_results/*.json"):
     r = json.load(open(f))
     data[(r["mode"], r["train_seed"])][r["eval_seed"]] = r
-
-modes = sorted({m for m, _ in data})
-trains = sorted({t for _, t in data})
-print("models x eval-seeds found:", {m: sum(len(data[(m, t)]) for t in trains if (m, t) in data) for m in modes})
+labels = sorted({k[0] for k in data})
+trains = lambda lab: sorted(t for (l, t) in data if l == lab)
 
 
-def vals(mode, t, key):
-    return [r[key] for r in data.get((mode, t), {}).values()]
+def runs(lab):
+    return [(t, e, r) for t in trains(lab) for e, r in data[(lab, t)].items()]
 
 
-print("\n(1) EVAL noise: same trained model, different traffic seed -> mean +/- sd over eval seeds")
+print("found:", {lab: len(runs(lab)) for lab in labels})
+
+print("\n(1) Pooled over all runs (train seed x eval seed): mean (sd)")
+print(f"  {'metric':10}" + "".join(f"{l:>20}" for l in labels))
 for key in METRICS:
-    print(key)
-    for mode in modes:
-        cells = []
-        for t in trains:
-            v = vals(mode, t, key)
-            if len(v) > 1:
-                cells.append(f"t{t}: {st.mean(v):7.1f}+/-{st.stdev(v):5.1f}")
-        print(f"  {mode:10}" + "  ".join(cells))
+    row = f"  {key:10}"
+    for lab in labels:
+        v = [r[key] for _, _, r in runs(lab)]
+        row += f"{st.mean(v):>12.1f} ({st.stdev(v):5.1f})" if len(v) > 1 else f"{'-':>20}"
+    print(row)
 
-print("\n(2) Variance split for each metric: avg within-model eval sd  vs  sd of model means across train seeds")
-for key in METRICS:
-    for mode in modes:
-        within = [st.stdev(vals(mode, t, key)) for t in trains if len(vals(mode, t, key)) > 1]
-        means = [st.mean(vals(mode, t, key)) for t in trains if vals(mode, t, key)]
-        if within and len(means) > 1:
-            print(f"  {key:10}{mode:10} eval-noise sd {st.mean(within):7.1f}   between-train-seed sd {st.stdev(means):7.1f}")
 
-print("\n(3) FL minus independent, averaged over eval seeds, per train seed (negative = FL better for wait/travel/loss/teleports)")
-for key in METRICS:
-    d = []
-    for t in trains:
-        a, b = vals("independent", t, key), vals("fl", t, key)
-        if a and b:
-            d.append(st.mean(b) - st.mean(a))
-    if len(d) > 1:
-        print(f"  {key:10}" + " ".join(f"{x:8.1f}" for x in d) + f" | mean {st.mean(d):7.1f} sd {st.stdev(d):6.1f}")
+def paired(a, b, key):
+    """b - a, paired by eval seed. Returns per-train-seed mean diffs of b's seeds."""
+    base = {}
+    for t, e, r in runs(a):
+        base.setdefault(e, []).append(r[key])
+    base = {e: st.mean(v) for e, v in base.items()}
+    per_seed = []
+    for t in trains(b):
+        d = [r[key] - base[e] for e, r in data[(b, t)].items() if e in base]
+        if d:
+            per_seed.append(st.mean(d))
+    return per_seed
 
-print("\n(4) Pooled over ALL (train seed x eval seed) runs: mean per mode")
-for key in METRICS:
-    row = []
-    for mode in modes:
-        v = [r[key] for t in trains for r in data.get((mode, t), {}).values()]
-        if v:
-            row.append(f"{mode}: {st.mean(v):8.1f} (n={len(v)}, sd {st.stdev(v):5.1f})")
-    print(f"  {key:10}" + "   ".join(row))
+
+PAIRS = [("independent_u2_solo", "fl_u2_solo"), ("canonical", "independent_u2_solo"),
+         ("canonical", "fl_u2_solo"), ("independent_u2", "independent_u2_solo"),
+         ("fl_u2", "fl_u2_solo"),
+         ("independent", "fl"), ("independent_u", "fl_u"),
+         ("independent_u2", "fl_u2"), ("canonical", "independent_u2"), ("canonical", "fl_u2"),
+         ("independent_u", "independent_u2"), ("independent", "independent_u2"), ("independent", "independent_u"),
+         ("canonical", "independent_u"), ("canonical", "fl_u"), ("canonical", "independent"),
+         ("independent", "fl_u")]
+print("\n(2) Paired differences  second - first  (mean over train seeds; se = sd/sqrt(n); +/- n seeds with diff<0)")
+for a, b in PAIRS:
+    if a not in labels or b not in labels:
+        continue
+    print(f"  {b}  minus  {a}")
+    for key in METRICS:
+        d = paired(a, b, key)
+        if len(d) < 1:
+            continue
+        se = st.stdev(d) / math.sqrt(len(d)) if len(d) > 1 else float("nan")
+        ref = st.mean([r[key] for _, _, r in runs(a)])
+        print(f"    {key:10} {st.mean(d):9.1f}  ({st.mean(d) / ref * 100:+6.1f}%)  se {se:6.1f}   "
+              f"neg in {sum(1 for x in d if x < 0)}/{len(d)} seeds")
+
+print("\n(3) Busy-junction average queue (m), pooled mean over runs")
+print(f"  {'junction':14}" + "".join(f"{l:>16}" for l in labels))
+for prefix, name in BUSY.items():
+    row = f"  {name:14}"
+    for lab in labels:
+        v = [q for _, _, r in runs(lab) for j, q in r["queue"].items() if j.startswith(prefix)]
+        row += f"{st.mean(v):>16.1f}" if v else f"{'-':>16}"
+    print(row)

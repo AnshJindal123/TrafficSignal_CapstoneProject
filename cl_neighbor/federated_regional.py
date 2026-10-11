@@ -52,6 +52,7 @@ import traci
 
 import dqn_traffic_combined as m
 import discover_neighbor_topology as nt
+import unified_dqn as ud
 
 REGION_ID = "region_main"
 
@@ -61,7 +62,35 @@ REGION_ID = "region_main"
 # multi-seed runs never overwrite each other. Evaluation uses EVAL_SEED (below)
 # so every model is judged on the same traffic.
 TRAIN_SEED = int(os.environ.get("FL_SEED", m.SEED))
-SEED_SUFFIX = "" if TRAIN_SEED == m.SEED else f"_s{TRAIN_SEED}"
+# Agent/network design (FL_DESIGN): "current" = per-junction shapes, only the
+# hidden->hidden layer is shared (original FL layer); "unified" = the common
+# interface in unified_dqn.py, whole network shared; "canonical" is evaluation
+# only (the original per-junction checkpoints dqn_policy_seq_*.pt).
+DESIGN = os.environ.get("FL_DESIGN", "current")
+assert DESIGN in ("current", "unified", "canonical")
+# Training regime (FL_REGIME): "joint" = all 8 agents learn at once in one shared
+# simulation (this file's train()); "solo" = each node trains ALONE against
+# fixed-time neighbors in its own simulation, like the canonical checkpoints
+# were (federated_solo.py). The tag keeps their outputs separate.
+REGIME = os.environ.get("FL_REGIME", "joint")
+assert REGIME in ("joint", "solo")
+# Regional grouping (FL_GROUPING): "none" = one region of all 8 nodes (original);
+# "load" = nodes are split into regions by how congested they are under the
+# fixed-time baseline (groups_by_load below), one RegionalAggregator per region,
+# so nodes only learn from nodes that see similar traffic. Each region's model
+# is a separate state_dict - exactly what a future global aggregator would
+# average across regions.
+GROUPING = os.environ.get("FL_GROUPING", "none")
+assert GROUPING in ("none", "load")
+BUSY_QUEUE_M = 20.0     # fixed-time avg queue (m) above which a node is "busy"
+DESIGN_TAG = ((ud.TAG if DESIGN == "unified" else "") + ("_solo" if REGIME == "solo" else "")
+              + ("_g" if GROUPING == "load" else ""))
+SEED_SUFFIX = DESIGN_TAG + ("" if TRAIN_SEED == m.SEED else f"_s{TRAIN_SEED}")
+# Aggregation weights: "reward" = steps / clipped mean|reward| (original FL
+# runs), "steps" = plain FedAvg by local step count. Default follows design so
+# old runs stay reproducible.
+WEIGHTING = os.environ.get("FL_WEIGHTING", "steps" if DESIGN == "unified" else "reward")
+assert WEIGHTING in ("reward", "steps")
 # SUMO seed used for greedy EVALUATION episodes (FL_EVAL_SEED, default = m.SEED),
 # so the same checkpoints can be re-tested on different traffic realisations.
 EVAL_SEED = int(os.environ.get("FL_EVAL_SEED", m.SEED))
@@ -74,6 +103,27 @@ ROUNDS = 5
 EPISODES_PER_ROUND = 4
 BLEND_ALPHA = 0.5
 REWARD_SCALE_CLIP = (0.5, 4.0)
+
+
+def groups_by_load(config, min_queue_m=None):
+    """{region_id: [tls_id, ...]}: nodes split into a 'busy' and a 'light' region
+    by their average queue under the non-adaptive fixed-time program
+    (ms_results/fixed_e*.json, written by eval_fixed.py). This is known before
+    any learning and needs no DQN results; the two sets are far apart on this
+    map (busy 58-246 m vs light 0-9 m). For a new area, run eval_fixed.py first."""
+    import glob
+    import json
+    thr = BUSY_QUEUE_M if min_queue_m is None else min_queue_m
+    qs = {}
+    for f in glob.glob("ms_results/fixed_e*.json"):
+        for j, v in json.load(open(f))["queue"].items():
+            qs.setdefault(j, []).append(v)
+    if not all(t in qs for t in config):
+        raise RuntimeError("fixed-time queues missing - run eval_fixed.py first")
+    groups = {"busy": [], "light": []}
+    for t in config:
+        groups["busy" if sum(qs[t]) / len(qs[t]) > thr else "light"].append(t)
+    return {g: ts for g, ts in groups.items() if ts}
 
 
 class RegionalAggregator:
@@ -105,16 +155,25 @@ class RegionalAggregator:
         return self.regional_model
 
 
+def shared_keys_for(agent):
+    """Unified agents share the WHOLE network; current-design agents share only
+    the hidden->hidden layer (the only shape-compatible one)."""
+    if isinstance(agent, ud.UnifiedJunctionAgent):
+        return tuple(k for k in agent.policy_net.state_dict()
+                     if not k.startswith(ud.LOCAL_KEY_PREFIXES))
+    return SHARED_KEYS
+
+
 def get_shared_params(agent):
     sd = agent.policy_net.state_dict()
-    return {k: sd[k].detach().clone() for k in SHARED_KEYS}
+    return {k: sd[k].detach().clone() for k in shared_keys_for(agent)}
 
 
 def set_shared_params(agent, shared, alpha=1.0):
     """alpha=1 overwrites the node's shared layer with the regional one (used
     for the common initial model); alpha<1 blends regional into local."""
     sd = agent.policy_net.state_dict()
-    for k in SHARED_KEYS:
+    for k in shared_keys_for(agent):
         sd[k].copy_((1.0 - alpha) * sd[k] + alpha * shared[k])
     agent.target_net.load_state_dict(agent.policy_net.state_dict())
 
@@ -133,18 +192,23 @@ class Runner:
         self.reward_n = 0
 
 
-def build_runners(config, topology, total_episodes):
+def build_agent(tls_id, info, neighbor_specs, decay, design=None):
+    design = design or DESIGN
+    qw, ww, qp = m.REWARD_WEIGHTS_OVERRIDES.get(tls_id, m.DEFAULT_REWARD_WEIGHTS)
+    kw = dict(queue_weight=qw, wait_weight=ww, queue_power=qp,
+              epsilon_decay=decay, neighbor_specs=neighbor_specs)
+    if design == "unified":
+        return ud.UnifiedJunctionAgent(tls_id, info["green_phases"], info["lane_groups"], **kw)
+    if design == "canonical":
+        return m.SingleJunctionAgent(tls_id, info["green_phases"], info["lane_groups"], **kw)
+    return m.SingleJunctionAgent(tls_id, info["green_phases"], info["lane_groups"],
+                                 hidden_size=FL_HIDDEN_SIZE, **kw)
+
+
+def build_runners(config, topology, total_episodes, design=None):
     decay = m.scaled_epsilon_decay(total_episodes)
-    runners = {}
-    for tls_id, info in config.items():
-        qw, ww, qp = m.REWARD_WEIGHTS_OVERRIDES.get(tls_id, m.DEFAULT_REWARD_WEIGHTS)
-        agent = m.SingleJunctionAgent(
-            tls_id, info["green_phases"], info["lane_groups"],
-            queue_weight=qw, wait_weight=ww, queue_power=qp,
-            epsilon_decay=decay, neighbor_specs=topology[tls_id],
-            hidden_size=FL_HIDDEN_SIZE)
-        runners[tls_id] = Runner(agent)
-    return runners
+    return {tls_id: Runner(build_agent(tls_id, info, topology[tls_id], decay, design))
+            for tls_id, info in config.items()}
 
 
 def reset_episode_state(runners, config):
@@ -218,6 +282,8 @@ def run_episode(runners, config, learn, sumo_extra=()):
 
 
 def ckpt_name(mode, tls_id):
+    if mode == "canonical":   # original per-junction checkpoints, any seed/design
+        return f"dqn_policy_seq_{tls_id.replace('/', '_')}.pt"
     return f"dqn_policy_{mode}{SEED_SUFFIX}_{tls_id.replace('/', '_')}.pt"
 
 
@@ -231,17 +297,27 @@ def train(mode, rounds=ROUNDS, episodes_per_round=EPISODES_PER_ROUND):
     config = m.discover_controllable_tls()
     topology = nt.discover_neighbor_inflows(config)
     runners = build_runners(config, topology, (rounds + 1) * episodes_per_round)
-    aggregator = RegionalAggregator(REGION_ID)
+    first_agent = next(iter(runners.values())).agent
+    keys = shared_keys_for(first_agent)
+    if GROUPING == "load":
+        groups = groups_by_load(config)
+        aggregators = {f"{REGION_ID}_{g}": (RegionalAggregator(f"{REGION_ID}_{g}", keys), ts)
+                       for g, ts in groups.items()}
+        print("regions:", {k: [t[:12] for t in ts] for k, (_, ts) in aggregators.items()}, flush=True)
+    else:
+        aggregators = {REGION_ID: (RegionalAggregator(REGION_ID, keys), list(runners))}
 
-    if mode == "fl":
-        # Step 1: common initial model distributed to every node.
-        init = get_shared_params(next(iter(runners.values())).agent)
+    if mode == "fl" or DESIGN == "unified":
+        # Step 1: common initial model distributed to every node. For the
+        # unified design (identical architectures) this is done in BOTH modes,
+        # so independent vs fl differ only by the aggregation step.
+        init = get_shared_params(first_agent)
         for r in runners.values():
             set_shared_params(r.agent, init)
 
     print(f"### mode={mode} region={REGION_ID} nodes={len(runners)} rounds={rounds} "
           f"+1 final local round, episodes/round={episodes_per_round} hidden={FL_HIDDEN_SIZE} "
-          f"blend={BLEND_ALPHA} seed={TRAIN_SEED} ###", flush=True)
+          f"blend={BLEND_ALPHA} seed={TRAIN_SEED} design={DESIGN} weighting={WEIGHTING} ###", flush=True)
 
     def save_all(prefix_mode):
         for tls_id, r in runners.items():
@@ -264,15 +340,19 @@ def train(mode, rounds=ROUNDS, episodes_per_round=EPISODES_PER_ROUND):
             # Steps 4-6: nodes send parameters only -> aggregate -> redistribute.
             updates = {}
             for t, r in runners.items():
-                scale = min(max(r.reward_abs_sum / max(1, r.reward_n), REWARD_SCALE_CLIP[0]),
-                            REWARD_SCALE_CLIP[1])
+                scale = 1.0 if WEIGHTING == "steps" else min(
+                    max(r.reward_abs_sum / max(1, r.reward_n), REWARD_SCALE_CLIP[0]),
+                    REWARD_SCALE_CLIP[1])
                 updates[t] = (get_shared_params(r.agent), r.train_steps / scale)
-            regional = aggregator.aggregate(updates)
-            for r in runners.values():
-                set_shared_params(r.agent, regional, BLEND_ALPHA)
-            total_w = sum(w for _, w in updates.values())
-            note = "aggregated, weights " + " ".join(
-                f"{t.split('_')[0][:6]}:{w / total_w:.2f}" for t, (_, w) in updates.items())
+            wnote = []
+            for rid, (aggr, members) in aggregators.items():
+                sub = {t: updates[t] for t in members}
+                regional = aggr.aggregate(sub)         # one aggregation per region
+                for t in members:
+                    set_shared_params(runners[t].agent, regional, BLEND_ALPHA)
+                total_w = sum(w for _, w in sub.values())
+                wnote += [f"{t.split('_')[0][:6]}:{w / total_w:.2f}" for t, (_, w) in sub.items()]
+            note = "aggregated, weights " + " ".join(wnote)
         elif mode == "independent":
             note = "no aggregation"
 
@@ -285,7 +365,8 @@ def train(mode, rounds=ROUNDS, episodes_per_round=EPISODES_PER_ROUND):
 
     save_all(mode)
     if mode == "fl":
-        torch.save(aggregator.get_regional_model(), f"regional_model_{REGION_ID}{SEED_SUFFIX}.pt")
+        for rid, (aggr, _) in aggregators.items():
+            torch.save(aggr.get_regional_model(), f"regional_model_{rid}{SEED_SUFFIX}.pt")
     print(f"=== federated_regional.py finished mode={mode} ===")
 
 

@@ -13,3 +13,15 @@ train_independent*.log
 train_fl*.log
 ms_logs/
 ms_eval_tmp/
+
+# Experiment bookkeeping (regenerable; do not commit)
+train_u*.log
+train_solo*.log
+train_g_*.log
+eval_fl_compare*.log
+smoke_*.log
+*_done.txt
+*_done_*.txt
+ms_results/
+diag/
+headroom_*.json
