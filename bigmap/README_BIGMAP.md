@@ -1,6 +1,6 @@
 # bigmap: unified regional FL on the merged 9-tile map
 
-Ansh's `unified_fl` code (`unified_dqn.py` v2, `federated_regional.py`, joint
+The `unified_fl` code (`unified_dqn.py` v2, `federated_regional.py`, joint
 regime) run on a **bigger map** built from 9 overlapping OSM tiles. Each
 script is a copy of `cl_neighbor/` from the `unified_fl` branch, and every
 change from that copy is listed below. Run everything **from this folder**.
@@ -20,7 +20,7 @@ Kept to the essentials:
 
 | | old 8-junction map | merged map (this folder) |
 |---|---|---|
-| source | 4 teammate maps, joined as separate islands | 9 overlapping OSM tiles of one contiguous area, lat 12.952-12.996, lon 77.621-77.678 (Indiranagar / Domlur / HAL) |
+| source | 4 separate OSM maps, joined as disconnected islands | 9 overlapping OSM tiles of one contiguous area, lat 12.952-12.996, lon 77.621-77.678 (Indiranagar / Domlur / HAL) |
 | passenger road | 247 lane-km | 674 lane-km |
 | controllable junctions (>=2 green phases) | 8 | **20** |
 | phase counts | 2, 3, 5 | 2 (x7), 3 (x7), 4 (x4), 6 (x1), 7 (x1) |
@@ -31,7 +31,7 @@ The map overlaps the old map, and 5 old junctions reappear:
 - **Renamed by the join:** old `#3more` is now `cluster_11801662689..._#6more`, with 6 phases and no phase merge, and old `481750173` is now `cluster_481750173_6440019886`.
 - The old per-junction overrides (`PHASE_MERGE_TLS`, `RICHER_STATE_TLS`, `IMBALANCE_OVERRIDES`, `REWARD_WEIGHTS_OVERRIDES`) are keyed by the old IDs, so here they apply to no junction. Every junction runs on defaults.
 
-Built with the same netconvert options as the team's original `map.net.xml`,
+Built with the same netconvert options as the project's original `map.net.xml`,
 plus `--no-turnarounds` as in `combined.net.xml`:
 ```
 netconvert --osm-files "map.osm,map (1).osm,...,map (8).osm" -o combined.net.xml --proj.utm \
@@ -99,7 +99,7 @@ full table is in `summary_bigmap.txt`.
 | trips finished | 3,774 | 4,615 | **4,628** | 4,532 |
 | teleports | 397 | 171 | **160** | 190 |
 
-- **DQN vs fixed time: big, clear win.** Both unified variants cut the all-vehicle wait by about 44-45%, finish about 22% more trips (+840) and halve teleports. On the 8-junction map the gain was about 6-8% (CLAUDE.md), so this map has far more room for learned control.
+- **DQN vs fixed time: big, clear win.** Both unified variants cut the all-vehicle wait by about 44-45%, finish about 22% more trips (+840) and halve teleports. On the 8-junction map the gain was about 6-8% (`cl_neighbor/CLAUDE.md`), so this map has far more room for learned control.
 - **FL vs independent: within noise.** Across the 5 eval seeds FL's mean is slightly better: -7.9 s all-vehicle wait (-2.7%), +13 trips, -10 teleports. But per eval seed, FL minus independent wait_all is -1.6, +2.7, +25.3, -15.1 and -50.9 s, so FL is better on 3 seeds and worse on 2. With one training seed, this is not a demonstrated FL gain. It matches the 8-junction finding (FL = independent within noise).
 - **The final local round matters.** The models saved just before the last aggregation (`fl_preagg`) are worse than both, so averaging alone pulls each node away from its local optimum. The final local-only round recovers it.
 - **Busy junctions, average queue (m), fixed / indep / FL:**
