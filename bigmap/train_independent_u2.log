@@ -1,0 +1,32 @@
+### mode=independent region=region_main nodes=20 rounds=5 +1 final local round, episodes/round=4 hidden=64 blend=0.5 seed=42 design=unified weighting=steps ###
+round 0 episode 0 done | mean epsilon=0.865
+round 0 episode 1 done | mean epsilon=0.748
+round 0 episode 2 done | mean epsilon=0.647
+round 0 episode 3 done | mean epsilon=0.560
+== round 0 complete (no aggregation) | avg reward 121363:-0.007 GS:-0.002 GS:-1.622 GS:-0.235 GS:-1.385 GS:-0.936 GS:-0.010 GS:-0.053 cluste:-1.116 cluste:-0.054 cluste:-2.176 cluste:-3.048 cluste:-0.022 cluste:-4.524 cluste:-0.215 cluste:-2.288 cluste:-0.095 cluste:-0.012 cluste:-0.017 joined:-1.073
+round 1 episode 0 done | mean epsilon=0.484
+round 1 episode 1 done | mean epsilon=0.419
+round 1 episode 2 done | mean epsilon=0.362
+round 1 episode 3 done | mean epsilon=0.313
+== round 1 complete (no aggregation) | avg reward 121363:-0.005 GS:-0.001 GS:-1.144 GS:-0.322 GS:-1.045 GS:-0.216 GS:-0.008 GS:-0.055 cluste:-0.805 cluste:-0.042 cluste:-0.681 cluste:-2.375 cluste:-0.020 cluste:-2.782 cluste:-0.180 cluste:-2.177 cluste:-0.057 cluste:-0.010 cluste:-0.013 joined:-0.551
+round 2 episode 0 done | mean epsilon=0.271
+round 2 episode 1 done | mean epsilon=0.234
+round 2 episode 2 done | mean epsilon=0.202
+round 2 episode 3 done | mean epsilon=0.175
+== round 2 complete (no aggregation) | avg reward 121363:-0.006 GS:-0.001 GS:-1.107 GS:-0.317 GS:-0.947 GS:-0.140 GS:-0.009 GS:-0.052 cluste:-0.823 cluste:-0.045 cluste:-0.463 cluste:-2.074 cluste:-0.019 cluste:-2.351 cluste:-0.091 cluste:-1.999 cluste:-0.055 cluste:-0.009 cluste:-0.013 joined:-0.361
+round 3 episode 0 done | mean epsilon=0.151
+round 3 episode 1 done | mean epsilon=0.130
+round 3 episode 2 done | mean epsilon=0.113
+round 3 episode 3 done | mean epsilon=0.097
+== round 3 complete (no aggregation) | avg reward 121363:-0.005 GS:-0.000 GS:-0.878 GS:-0.353 GS:-0.832 GS:-0.111 GS:-0.007 GS:-0.055 cluste:-0.872 cluste:-0.041 cluste:-0.317 cluste:-1.745 cluste:-0.015 cluste:-2.224 cluste:-0.186 cluste:-2.289 cluste:-0.035 cluste:-0.007 cluste:-0.011 joined:-0.644
+round 4 episode 0 done | mean epsilon=0.084
+round 4 episode 1 done | mean epsilon=0.072
+round 4 episode 2 done | mean epsilon=0.062
+round 4 episode 3 done | mean epsilon=0.056
+== round 4 complete (no aggregation) | avg reward 121363:-0.005 GS:-0.001 GS:-0.713 GS:-0.373 GS:-0.813 GS:-0.087 GS:-0.007 GS:-0.061 cluste:-0.859 cluste:-0.039 cluste:-0.288 cluste:-1.581 cluste:-0.015 cluste:-2.100 cluste:-0.099 cluste:-2.217 cluste:-0.037 cluste:-0.007 cluste:-0.011 joined:-0.369
+round 5 episode 0 done | mean epsilon=0.052
+round 5 episode 1 done | mean epsilon=0.051
+round 5 episode 2 done | mean epsilon=0.050
+round 5 episode 3 done | mean epsilon=0.050
+== round 5 complete (no aggregation) | avg reward 121363:-0.005 GS:-0.001 GS:-0.854 GS:-0.288 GS:-0.813 GS:-0.091 GS:-0.007 GS:-0.053 cluste:-0.865 cluste:-0.041 cluste:-0.254 cluste:-1.493 cluste:-0.015 cluste:-2.272 cluste:-0.185 cluste:-2.207 cluste:-0.040 cluste:-0.008 cluste:-0.010 joined:-0.646
+=== federated_regional.py finished mode=independent ===
