@@ -68,6 +68,7 @@ def paired(a, b, key):
 
 
 PAIRS = [("fixed", "independent_u2"), ("fixed", "fl_u2"),
+         ("fixed", "fl_u3"), ("fl_u2", "fl_u3"), ("independent_u2", "independent_u3"),
          ("independent_u2_solo", "fl_u2_solo"), ("canonical", "independent_u2_solo"),
          ("canonical", "fl_u2_solo"), ("independent_u2", "independent_u2_solo"),
          ("fl_u2", "fl_u2_solo"),

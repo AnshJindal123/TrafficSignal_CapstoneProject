@@ -192,13 +192,14 @@ class Runner:
         self.reward_n = 0
 
 
-def build_agent(tls_id, info, neighbor_specs, decay, design=None):
+def build_agent(tls_id, info, neighbor_specs, decay, design=None, phase_inflow_lanes=None):
     design = design or DESIGN
     qw, ww, qp = m.REWARD_WEIGHTS_OVERRIDES.get(tls_id, m.DEFAULT_REWARD_WEIGHTS)
     kw = dict(queue_weight=qw, wait_weight=ww, queue_power=qp,
               epsilon_decay=decay, neighbor_specs=neighbor_specs)
     if design == "unified":
-        return ud.UnifiedJunctionAgent(tls_id, info["green_phases"], info["lane_groups"], **kw)
+        return ud.UnifiedJunctionAgent(tls_id, info["green_phases"], info["lane_groups"],
+                                       phase_inflow_lanes=phase_inflow_lanes, **kw)
     if design == "canonical":
         return m.SingleJunctionAgent(tls_id, info["green_phases"], info["lane_groups"], **kw)
     return m.SingleJunctionAgent(tls_id, info["green_phases"], info["lane_groups"],
@@ -207,7 +208,11 @@ def build_agent(tls_id, info, neighbor_specs, decay, design=None):
 
 def build_runners(config, topology, total_episodes, design=None):
     decay = m.scaled_epsilon_decay(total_episodes)
-    return {tls_id: Runner(build_agent(tls_id, info, topology[tls_id], decay, design))
+    design = design or DESIGN
+    phase_inflows = (nt.discover_phase_inflows(config)
+                     if design == "unified" and ud.VERSION == "v3" else {})
+    return {tls_id: Runner(build_agent(tls_id, info, topology[tls_id], decay, design,
+                                       phase_inflows.get(tls_id)))
             for tls_id, info in config.items()}
 
 
