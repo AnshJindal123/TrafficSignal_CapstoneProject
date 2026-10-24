@@ -1,45 +1,69 @@
-found: {'fixed': 5, 'fl_preagg_u2': 5, 'fl_u2': 5, 'independent_u2': 5}
+found: {'fixed': 5, 'fl_u2_g': 10, 'fl_u3_g': 10, 'independent_u2': 10, 'independent_u3': 10}
 
 (1) Pooled over all runs (train seed x eval seed): mean (sd)
-  metric                   fixed        fl_preagg_u2               fl_u2      independent_u2
-  wait_all         838.1 (  9.0)       742.9 (  7.3)       738.7 (  6.5)       731.9 (  8.5)
-  delay_all        841.8 (  9.1)       747.1 (  7.5)       742.9 (  6.8)       736.1 (  8.6)
-  wait             323.1 ( 16.7)       209.5 (  7.0)       209.1 (  7.9)       204.7 (  6.1)
-  travel           684.3 ( 19.2)       581.6 (  6.6)       583.3 ( 10.1)       575.5 (  7.1)
-  loss             434.1 ( 17.9)       319.6 (  7.5)       320.9 (  9.5)       314.9 (  7.2)
-  teleports       1695.6 ( 63.0)      1675.6 ( 41.0)      1720.4 ( 37.7)      1640.6 ( 48.9)
-  trips           4160.0 ( 38.9)      4460.0 ( 43.8)      4488.0 ( 37.8)      4480.0 ( 43.0)
+  metric                   fixed             fl_u2_g             fl_u3_g      independent_u2      independent_u3
+  wait_all         505.8 (  4.3)       249.2 ( 19.9)       253.6 ( 16.0)       254.3 ( 11.3)       251.7 ( 19.1)
+  delay_all        506.8 (  4.3)       250.3 ( 20.1)       254.7 ( 16.1)       255.5 ( 11.3)       252.8 ( 19.2)
+  wait             261.0 (  6.2)       126.9 ( 13.3)       127.5 (  8.6)       129.4 (  5.1)       123.2 (  8.2)
+  travel           640.5 (  7.1)       540.6 ( 13.9)       541.7 ( 10.8)       543.4 (  5.7)       536.5 ( 10.1)
+  loss             358.1 (  6.7)       237.6 ( 14.7)       238.5 ( 10.3)       240.8 (  6.6)       234.2 (  9.3)
+  teleports        266.0 ( 13.7)       152.3 ( 16.5)       159.7 ( 22.8)       154.7 (  9.9)       139.3 ( 14.2)
+  trips           2361.2 ( 16.7)      2859.0 ( 41.1)      2853.8 ( 40.3)      2852.7 ( 26.4)      2850.0 ( 41.3)
 
 (2) Paired differences  second - first  (mean over train seeds; se = sd/sqrt(n); +/- n seeds with diff<0)
+  fl_u2_g  minus  fixed
+    wait_all      -256.6  ( -50.7%)  se   13.2   neg in 2/2 seeds
+    delay_all     -256.5  ( -50.6%)  se   13.4   neg in 2/2 seeds
+    wait          -134.1  ( -51.4%)  se    7.6   neg in 2/2 seeds
+    travel        -100.0  ( -15.6%)  se    7.7   neg in 2/2 seeds
+    loss          -120.5  ( -33.7%)  se    8.5   neg in 2/2 seeds
+    teleports     -113.7  ( -42.7%)  se    8.9   neg in 2/2 seeds
+    trips          497.8  ( +21.1%)  se   24.8   neg in 0/2 seeds
+  fl_u3_g  minus  fixed
+    wait_all      -252.2  ( -49.9%)  se   11.6   neg in 2/2 seeds
+    delay_all     -252.1  ( -49.7%)  se   11.8   neg in 2/2 seeds
+    wait          -133.5  ( -51.1%)  se    0.2   neg in 2/2 seeds
+    travel         -98.8  ( -15.4%)  se    4.8   neg in 2/2 seeds
+    loss          -119.5  ( -33.4%)  se    3.8   neg in 2/2 seeds
+    teleports     -106.3  ( -40.0%)  se   17.1   neg in 2/2 seeds
+    trips          492.6  ( +20.9%)  se   29.8   neg in 0/2 seeds
+  fl_u3_g  minus  fl_u2_g
+    wait_all         4.4  (  +1.8%)  se   11.6   neg in 1/2 seeds
+    delay_all        4.4  (  +1.8%)  se   11.8   neg in 1/2 seeds
+    wait             0.6  (  +0.5%)  se    0.2   neg in 0/2 seeds
+    travel           1.2  (  +0.2%)  se    4.8   neg in 1/2 seeds
+    loss             1.0  (  +0.4%)  se    3.8   neg in 1/2 seeds
+    teleports        7.4  (  +4.9%)  se   17.1   neg in 1/2 seeds
+    trips           -5.2  (  -0.2%)  se   29.8   neg in 1/2 seeds
+  fl_u2_g  minus  independent_u2
+    wait_all        -5.1  (  -2.0%)  se   13.2   neg in 1/2 seeds
+    delay_all       -5.1  (  -2.0%)  se   13.4   neg in 1/2 seeds
+    wait            -2.5  (  -1.9%)  se    7.6   neg in 1/2 seeds
+    travel          -2.8  (  -0.5%)  se    7.7   neg in 1/2 seeds
+    loss            -3.2  (  -1.3%)  se    8.5   neg in 1/2 seeds
+    teleports       -2.4  (  -1.6%)  se    8.9   neg in 1/2 seeds
+    trips            6.3  (  +0.2%)  se   24.8   neg in 1/2 seeds
+  fl_u3_g  minus  independent_u3
+    wait_all         1.9  (  +0.8%)  se   11.6   neg in 1/2 seeds
+    delay_all        2.0  (  +0.8%)  se   11.8   neg in 1/2 seeds
+    wait             4.3  (  +3.5%)  se    0.2   neg in 0/2 seeds
+    travel           5.3  (  +1.0%)  se    4.8   neg in 0/2 seeds
+    loss             4.4  (  +1.9%)  se    3.8   neg in 0/2 seeds
+    teleports       20.4  ( +14.6%)  se   17.1   neg in 0/2 seeds
+    trips            3.8  (  +0.1%)  se   29.8   neg in 1/2 seeds
   independent_u2  minus  fixed
-    wait_all      -106.2  ( -12.7%)  se    nan   neg in 1/1 seeds
-    delay_all     -105.7  ( -12.6%)  se    nan   neg in 1/1 seeds
-    wait          -118.4  ( -36.7%)  se    nan   neg in 1/1 seeds
-    travel        -108.7  ( -15.9%)  se    nan   neg in 1/1 seeds
-    loss          -119.2  ( -27.5%)  se    nan   neg in 1/1 seeds
-    teleports      -55.0  (  -3.2%)  se    nan   neg in 1/1 seeds
-    trips          320.0  (  +7.7%)  se    nan   neg in 0/1 seeds
-  fl_u2  minus  fixed
-    wait_all       -99.4  ( -11.9%)  se    nan   neg in 1/1 seeds
-    delay_all      -99.0  ( -11.8%)  se    nan   neg in 1/1 seeds
-    wait          -114.0  ( -35.3%)  se    nan   neg in 1/1 seeds
-    travel        -101.0  ( -14.8%)  se    nan   neg in 1/1 seeds
-    loss          -113.2  ( -26.1%)  se    nan   neg in 1/1 seeds
-    teleports       24.8  (  +1.5%)  se    nan   neg in 0/1 seeds
-    trips          328.0  (  +7.9%)  se    nan   neg in 0/1 seeds
-  fl_u2  minus  independent_u2
-    wait_all         6.8  (  +0.9%)  se    nan   neg in 0/1 seeds
-    delay_all        6.8  (  +0.9%)  se    nan   neg in 0/1 seeds
-    wait             4.5  (  +2.2%)  se    nan   neg in 0/1 seeds
-    travel           7.8  (  +1.3%)  se    nan   neg in 0/1 seeds
-    loss             6.0  (  +1.9%)  se    nan   neg in 0/1 seeds
-    teleports       79.8  (  +4.9%)  se    nan   neg in 0/1 seeds
-    trips            8.0  (  +0.2%)  se    nan   neg in 0/1 seeds
+    wait_all      -251.5  ( -49.7%)  se    4.9   neg in 2/2 seeds
+    delay_all     -251.3  ( -49.6%)  se    4.9   neg in 2/2 seeds
+    wait          -131.6  ( -50.4%)  se    1.9   neg in 2/2 seeds
+    travel         -97.1  ( -15.2%)  se    3.0   neg in 2/2 seeds
+    loss          -117.3  ( -32.7%)  se    3.0   neg in 2/2 seeds
+    teleports     -111.3  ( -41.8%)  se    2.1   neg in 2/2 seeds
+    trips          491.5  ( +20.8%)  se    6.5   neg in 0/2 seeds
 
 (3) Busy-junction average queue (m), pooled mean over runs
-  junction                         fixed    fl_preagg_u2           fl_u2  independent_u2
-  cluster_11801662689_             608.6            85.5            85.2            90.6
-  GS_cluster_100762026             455.1           150.2           164.0           142.2
-  joinedS_11150087489_             393.4           383.2           391.7           383.1
-  cluster_10676255302_             173.5            17.6            15.6            16.1
-  cluster_11155831177_             166.3           167.8           167.7           164.7
+  junction                         fixed         fl_u2_g         fl_u3_g  independent_u2  independent_u3
+  joinedS_11150087489_             353.8           330.2           334.2           340.0           335.1
+  cluster_11801662689_              90.5            16.0            15.7            15.7            15.7
+  cluster_11155831177_              78.8            10.3            11.3            10.6             9.8
+  GS_cluster_100762026              63.9            12.4            11.5            11.8            12.0
+  cluster_11187974841_              53.2            17.6            19.8            17.4            18.6

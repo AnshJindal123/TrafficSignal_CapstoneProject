@@ -83,8 +83,22 @@ assert REGIME in ("joint", "solo")
 GROUPING = os.environ.get("FL_GROUPING", "none")
 assert GROUPING in ("none", "load")
 BUSY_QUEUE_M = 20.0     # fixed-time avg queue (m) above which a node is "busy"
+# Training-demand variation (FL_TRAIN_VARY=1, joint regime): training runs in
+# blocks of EPISODES_PER_SEED episodes, block k on traffic seed
+# TRAIN_TRAFFIC_SEEDS[k] - SUMO --seed AND that seed's own random TRAIN_FRAC
+# subset of combined.rou.xml (thin_demand.random_subset; --seed alone barely
+# changes traffic, since the route file fixes every departure and route) -
+# instead of combined.sumocfg's demand every episode, so agents learn across
+# traffic patterns rather than one realisation. The schedule is the same for
+# every FL_SEED (which then only sets init/exploration), and avoids the eval
+# seeds 11-55. Evaluation is unchanged (combined.sumocfg demand, EVAL_SEED), so
+# it stays a pattern the agents never trained on. Tag _v.
+TRAIN_VARY = os.environ.get("FL_TRAIN_VARY", "0") == "1"
+TRAIN_TRAFFIC_SEEDS = (42, 7, 123, 2024)
+EPISODES_PER_SEED = 6
+TRAIN_FRAC = 0.35
 DESIGN_TAG = ((ud.TAG if DESIGN == "unified" else "") + ("_solo" if REGIME == "solo" else "")
-              + ("_g" if GROUPING == "load" else ""))
+              + ("_g" if GROUPING == "load" else "") + ("_v" if TRAIN_VARY else ""))
 SEED_SUFFIX = DESIGN_TAG + ("" if TRAIN_SEED == m.SEED else f"_s{TRAIN_SEED}")
 # Aggregation weights: "reward" = steps / clipped mean|reward| (original FL
 # runs), "steps" = plain FedAvg by local step count. Default follows design so
@@ -192,13 +206,14 @@ class Runner:
         self.reward_n = 0
 
 
-def build_agent(tls_id, info, neighbor_specs, decay, design=None):
+def build_agent(tls_id, info, neighbor_specs, decay, design=None, phase_inflow_lanes=None):
     design = design or DESIGN
     qw, ww, qp = m.REWARD_WEIGHTS_OVERRIDES.get(tls_id, m.DEFAULT_REWARD_WEIGHTS)
     kw = dict(queue_weight=qw, wait_weight=ww, queue_power=qp,
               epsilon_decay=decay, neighbor_specs=neighbor_specs)
     if design == "unified":
-        return ud.UnifiedJunctionAgent(tls_id, info["green_phases"], info["lane_groups"], **kw)
+        return ud.UnifiedJunctionAgent(tls_id, info["green_phases"], info["lane_groups"],
+                                       phase_inflow_lanes=phase_inflow_lanes, **kw)
     if design == "canonical":
         return m.SingleJunctionAgent(tls_id, info["green_phases"], info["lane_groups"], **kw)
     return m.SingleJunctionAgent(tls_id, info["green_phases"], info["lane_groups"],
@@ -207,7 +222,11 @@ def build_agent(tls_id, info, neighbor_specs, decay, design=None):
 
 def build_runners(config, topology, total_episodes, design=None):
     decay = m.scaled_epsilon_decay(total_episodes)
-    return {tls_id: Runner(build_agent(tls_id, info, topology[tls_id], decay, design))
+    design = design or DESIGN
+    phase_inflows = (nt.discover_phase_inflows(config)
+                     if design == "unified" and ud.VERSION == "v3" else {})
+    return {tls_id: Runner(build_agent(tls_id, info, topology[tls_id], decay, design,
+                                       phase_inflows.get(tls_id)))
             for tls_id, info in config.items()}
 
 
@@ -224,13 +243,20 @@ def reset_episode_state(runners, config):
         r.pending_train = None
 
 
-def run_episode(runners, config, learn, sumo_extra=()):
+def run_episode(runners, config, learn, sumo_extra=(), episode=0):
     """One 3600 s simulation with ALL agents on one shared clock. learn=True:
     every agent stores transitions and trains (local DQN training, unchanged);
-    learn=False: pure greedy evaluation (caller sets epsilon=0)."""
-    traci.start(["sumo", "-c", "combined.sumocfg", "--no-step-log",
-                 "--duration-log.disable",
-                 "--seed", str(TRAIN_SEED if learn else EVAL_SEED), *sumo_extra])
+    learn=False: pure greedy evaluation (caller sets epsilon=0). episode only
+    matters with TRAIN_VARY: its block picks the traffic seed."""
+    seed, routes = (TRAIN_SEED if learn else EVAL_SEED), []
+    if learn and TRAIN_VARY:
+        import thin_demand
+        seed = TRAIN_TRAFFIC_SEEDS[(episode // EPISODES_PER_SEED) % len(TRAIN_TRAFFIC_SEEDS)]
+        routes = ["--route-files", thin_demand.random_subset(TRAIN_FRAC, seed)]
+    if learn and TRAIN_VARY:
+        print(f"episode {episode}: traffic seed {seed} ({routes[1]})", flush=True)
+    traci.start(["sumo", "-c", "combined.sumocfg", *routes, "--no-step-log",
+                 "--duration-log.disable", "--seed", str(seed), *sumo_extra])
     for tls_id in config:
         m.apply_phase_merge(tls_id)
     reset_episode_state(runners, config)
@@ -317,7 +343,8 @@ def train(mode, rounds=ROUNDS, episodes_per_round=EPISODES_PER_ROUND):
 
     print(f"### mode={mode} region={REGION_ID} nodes={len(runners)} rounds={rounds} "
           f"+1 final local round, episodes/round={episodes_per_round} hidden={FL_HIDDEN_SIZE} "
-          f"blend={BLEND_ALPHA} seed={TRAIN_SEED} design={DESIGN} weighting={WEIGHTING} ###", flush=True)
+          f"blend={BLEND_ALPHA} seed={TRAIN_SEED} design={DESIGN} weighting={WEIGHTING} "
+          f"train_vary={TRAIN_VARY} ###", flush=True)
 
     def save_all(prefix_mode):
         for tls_id, r in runners.items():
@@ -329,7 +356,7 @@ def train(mode, rounds=ROUNDS, episodes_per_round=EPISODES_PER_ROUND):
         for r in runners.values():
             r.train_steps = 0
         for ep in range(episodes_per_round):
-            run_episode(runners, config, learn=True)
+            run_episode(runners, config, learn=True, episode=rnd * episodes_per_round + ep)
             eps = np.mean([r.agent.epsilon for r in runners.values()])
             print(f"round {rnd} episode {ep} done | mean epsilon={eps:.3f}", flush=True)
 

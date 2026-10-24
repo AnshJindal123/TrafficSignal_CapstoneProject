@@ -185,6 +185,78 @@ def discover_neighbor_inflows(config, net_file="combined.net.xml"):
     return inflows
 
 
+def _entry_lanes_from_edge(start_edge, edge_len, adj, tl_in_lanes, tls_ids, exclude_tls):
+    """Same search as _nearest_neighbors_from_edge, but returns
+    {neighbor_tls: set(its incoming lane ids)} - the lanes at the neighbor
+    that the traced paths actually ENTER on, so they can be mapped to the
+    neighbor's phases (lane_groups)."""
+    found = {}
+    visited = set()
+    heap = [(0.0, start_edge, 0)]
+    while heap:
+        dist_to_start, edge, hops = heapq.heappop(heap)
+        if edge in visited:
+            continue
+        visited.add(edge)
+        if hops > NEIGHBOR_MAX_HOPS:
+            continue
+        dist_to_end = dist_to_start + edge_len.get(edge, 0.0)
+        if dist_to_end > NEIGHBOR_MAX_DISTANCE_M:
+            continue
+        for to_edge, tl in adj.get(edge, []):
+            if tl is not None and tl in tls_ids and tl != exclude_tls:
+                found.setdefault(tl, set()).update(tl_in_lanes.get((edge, tl), ()))
+                continue  # don't trace past a controllable junction
+            if to_edge not in visited:
+                heapq.heappush(heap, (dist_to_end, to_edge, hops + 1))
+    return found
+
+
+def discover_phase_inflows(config, net_file="combined.net.xml"):
+    """Returns {tls_id: [lanes_for_phase_0, lanes_for_phase_1, ...]} - one
+    sorted list per green phase of tls_id, holding the UPSTREAM neighbors'
+    outgoing lanes whose traced path enters tls_id on a lane that phase
+    serves. Summing vehicles on those lanes tells the junction "x vehicles
+    are coming toward THIS approach" (per phase), instead of the single
+    all-neighbors scalar of discover_neighbor_inflows(). Read directly
+    from the lanes - no message is exchanged between nodes.
+
+    Same upper-bound proxy caveat as the module docstring: a lane whose
+    traffic fans out to several of the neighbor's approaches counts toward
+    each of those phases."""
+    tls_ids = set(config.keys())
+    out_lanes_by_tls = _outgoing_lanes_by_tls(config)
+    edge_len, adj, lane_to_edge = _parse_net_graph(net_file)
+    tl_in_lanes = {}   # (from_edge, tl) -> {incoming lane ids at that tl}
+    for conn in ET.parse(net_file).getroot().findall('connection'):
+        tl = conn.get('tl')
+        if tl in tls_ids and conn.get('fromLane') is not None:
+            tl_in_lanes.setdefault((conn.get('from'), tl), set()).add(
+                f"{conn.get('from')}_{conn.get('fromLane')}")
+
+    entry = {tls_id: {} for tls_id in config}   # B -> {B's incoming lane: {A's lanes}}
+    for upstream in config:
+        for lane in out_lanes_by_tls[upstream]:
+            edge = lane_to_edge.get(lane)
+            if edge is None:
+                continue
+            found = _entry_lanes_from_edge(edge, edge_len, adj, tl_in_lanes, tls_ids, upstream)
+            for downstream, in_lanes in found.items():
+                for in_lane in in_lanes:
+                    entry[downstream].setdefault(in_lane, set()).add(lane)
+
+    result = {}
+    for tls_id, info in config.items():
+        per_phase = []
+        for group in info["lane_groups"]:
+            src = set()
+            for in_lane in group:
+                src |= entry[tls_id].get(in_lane, set())
+            per_phase.append(sorted(src))
+        result[tls_id] = per_phase
+    return result
+
+
 if __name__ == "__main__":
     config = m.discover_controllable_tls()
     topology = discover_neighbor_outflows(config)

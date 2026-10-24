@@ -37,6 +37,13 @@ Versions (UNIFIED_VERSION env, default v2; labels/filenames carry the tag):
      * a small per-node learned phase-identity embedding (phase_embed): LOCAL,
        never aggregated, so each node keeps its own idea of "which phase is
        which" while every other parameter stays shared.
+  v3 (tag _u3): v2 + one more per-phase feature: vehicles the upstream
+     neighbors just released toward the lanes THIS phase serves, /20
+     (discover_neighbor_topology.discover_phase_inflows). v2 only sees the
+     all-neighbors sum in the context, identical for every phase, so it can
+     tell "traffic is coming" but not "coming to which approach". Read
+     straight off the upstream lanes - no message between nodes. Given to
+     every junction (thin or rich): it is the new information under test.
 
 Reuses SingleJunctionAgent entirely (heuristics in choose_action via the
 _queues_from_state hook, reward, replay, Double-DQN train(), epsilon) - only
@@ -52,9 +59,9 @@ import torch.optim as optim
 import dqn_traffic_combined as m
 
 VERSION = os.environ.get("UNIFIED_VERSION", "v2")
-assert VERSION in ("v1", "v2")
-TAG = "_u" if VERSION == "v1" else "_u2"
-PHASE_FEATS = 5 if VERSION == "v1" else 8
+assert VERSION in ("v1", "v2", "v3")
+TAG = {"v1": "_u", "v2": "_u2", "v3": "_u3"}[VERSION]
+PHASE_FEATS = {"v1": 5, "v2": 8, "v3": 9}[VERSION]
 CTX_FEATS = 2
 # Merged 22-tile map: largest controllable junction has 8 green phases
 # (9-tile map: 7; original 8-junction map: 5). Changes phase_embed's shape
@@ -93,8 +100,10 @@ class UnifiedDQN(nn.Module):
 
 
 class UnifiedJunctionAgent(m.SingleJunctionAgent):
-    def __init__(self, *args, unified_hidden=UNIFIED_HIDDEN, **kwargs):
+    def __init__(self, *args, unified_hidden=UNIFIED_HIDDEN, phase_inflow_lanes=None, **kwargs):
         super().__init__(*args, **kwargs)
+        # v3: per-phase upstream lanes from discover_phase_inflows() (one list per phase)
+        self.phase_inflow_lanes = phase_inflow_lanes or [[] for _ in range(self.n_actions)]
         self.rich = (UNIFIED_FEATURES == "all") or (self.tls_id in m.RICHER_STATE_TLS)
         self.state_size = self.n_actions * PHASE_FEATS + CTX_FEATS
         self.policy_net = UnifiedDQN(unified_hidden)
@@ -120,9 +129,13 @@ class UnifiedJunctionAgent(m.SingleJunctionAgent):
             self.prev_queues[i] = queue
             is_cur = 1.0 if self.green_phases[i] == self.current_phase else 0.0
             state.extend([queue / 20.0, wait / 300.0, speed / 15.0, trend / 20.0, is_cur])
-            if VERSION == "v2":
+            if VERSION in ("v2", "v3"):
                 state.extend([len(group) / 4.0, i / 4.0,
                               min(self.wait_since_served[i] / 300.0, 2.0)])
+            if VERSION == "v3":
+                incoming = sum(traci.lane.getLastStepVehicleNumber(l)
+                               for l in self.phase_inflow_lanes[i])
+                state.append(incoming / m.NEIGHBOR_OUTFLOW_SCALE)
         state.append(self.phase_time / m.MAX_GREEN if self.rich else 0.0)
         state.append(float(sum(self._neighbor_outflow_features())))
         return np.array(state, dtype=np.float32)

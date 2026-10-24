@@ -9,7 +9,7 @@ import gzip
 import os
 import shutil
 
-for name in ("combined.net.xml", "combined.rou.xml"):
+for name in ("combined.net.xml", "combined.rou.xml", "demand_0.35.rou.xml"):
     if os.path.exists(name):
         print(f"{name} already present")
         continue

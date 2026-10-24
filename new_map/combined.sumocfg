@@ -5,7 +5,7 @@
 
     <input>
         <net-file value="combined.net.xml"/>
-        <route-files value="combined.rou.xml"/>
+        <route-files value="demand_0.35.rou.xml"/>
     </input>
 
     <time>

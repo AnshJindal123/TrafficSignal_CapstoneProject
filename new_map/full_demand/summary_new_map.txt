@@ -1,0 +1,45 @@
+found: {'fixed': 5, 'fl_preagg_u2': 5, 'fl_u2': 5, 'independent_u2': 5}
+
+(1) Pooled over all runs (train seed x eval seed): mean (sd)
+  metric                   fixed        fl_preagg_u2               fl_u2      independent_u2
+  wait_all         838.1 (  9.0)       742.9 (  7.3)       738.7 (  6.5)       731.9 (  8.5)
+  delay_all        841.8 (  9.1)       747.1 (  7.5)       742.9 (  6.8)       736.1 (  8.6)
+  wait             323.1 ( 16.7)       209.5 (  7.0)       209.1 (  7.9)       204.7 (  6.1)
+  travel           684.3 ( 19.2)       581.6 (  6.6)       583.3 ( 10.1)       575.5 (  7.1)
+  loss             434.1 ( 17.9)       319.6 (  7.5)       320.9 (  9.5)       314.9 (  7.2)
+  teleports       1695.6 ( 63.0)      1675.6 ( 41.0)      1720.4 ( 37.7)      1640.6 ( 48.9)
+  trips           4160.0 ( 38.9)      4460.0 ( 43.8)      4488.0 ( 37.8)      4480.0 ( 43.0)
+
+(2) Paired differences  second - first  (mean over train seeds; se = sd/sqrt(n); +/- n seeds with diff<0)
+  independent_u2  minus  fixed
+    wait_all      -106.2  ( -12.7%)  se    nan   neg in 1/1 seeds
+    delay_all     -105.7  ( -12.6%)  se    nan   neg in 1/1 seeds
+    wait          -118.4  ( -36.7%)  se    nan   neg in 1/1 seeds
+    travel        -108.7  ( -15.9%)  se    nan   neg in 1/1 seeds
+    loss          -119.2  ( -27.5%)  se    nan   neg in 1/1 seeds
+    teleports      -55.0  (  -3.2%)  se    nan   neg in 1/1 seeds
+    trips          320.0  (  +7.7%)  se    nan   neg in 0/1 seeds
+  fl_u2  minus  fixed
+    wait_all       -99.4  ( -11.9%)  se    nan   neg in 1/1 seeds
+    delay_all      -99.0  ( -11.8%)  se    nan   neg in 1/1 seeds
+    wait          -114.0  ( -35.3%)  se    nan   neg in 1/1 seeds
+    travel        -101.0  ( -14.8%)  se    nan   neg in 1/1 seeds
+    loss          -113.2  ( -26.1%)  se    nan   neg in 1/1 seeds
+    teleports       24.8  (  +1.5%)  se    nan   neg in 0/1 seeds
+    trips          328.0  (  +7.9%)  se    nan   neg in 0/1 seeds
+  fl_u2  minus  independent_u2
+    wait_all         6.8  (  +0.9%)  se    nan   neg in 0/1 seeds
+    delay_all        6.8  (  +0.9%)  se    nan   neg in 0/1 seeds
+    wait             4.5  (  +2.2%)  se    nan   neg in 0/1 seeds
+    travel           7.8  (  +1.3%)  se    nan   neg in 0/1 seeds
+    loss             6.0  (  +1.9%)  se    nan   neg in 0/1 seeds
+    teleports       79.8  (  +4.9%)  se    nan   neg in 0/1 seeds
+    trips            8.0  (  +0.2%)  se    nan   neg in 0/1 seeds
+
+(3) Busy-junction average queue (m), pooled mean over runs
+  junction                         fixed    fl_preagg_u2           fl_u2  independent_u2
+  cluster_11801662689_             608.6            85.5            85.2            90.6
+  GS_cluster_100762026             455.1           150.2           164.0           142.2
+  joinedS_11150087489_             393.4           383.2           391.7           383.1
+  cluster_10676255302_             173.5            17.6            15.6            16.1
+  cluster_11155831177_             166.3           167.8           167.7           164.7

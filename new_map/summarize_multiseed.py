@@ -67,7 +67,11 @@ def paired(a, b, key):
     return per_seed
 
 
-PAIRS = [("fixed", "independent_u2"), ("fixed", "fl_u2"),
+PAIRS = [("fixed", "fl_u2_g_v"), ("independent_u2_v", "fl_u2_g_v"),
+         ("fl_u2_g", "fl_u2_g_v"), ("independent_u2", "independent_u2_v"),
+         ("fixed", "fl_u2_g"), ("fixed", "fl_u3_g"), ("fl_u2_g", "fl_u3_g"),
+         ("independent_u2", "fl_u2_g"), ("independent_u3", "fl_u3_g"),
+         ("fixed", "independent_u2"), ("fixed", "fl_u2"),
          ("independent_u2_solo", "fl_u2_solo"), ("canonical", "independent_u2_solo"),
          ("canonical", "fl_u2_solo"), ("independent_u2", "independent_u2_solo"),
          ("fl_u2", "fl_u2_solo"),

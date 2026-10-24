@@ -12,3 +12,6 @@ eval_ms_e*.log
 dqn_policy_fl_preagg_*.pt
 eval_fixed_e*.log
 run_baseline.log
+# Demand calibration (thin_demand.py / run_baseline.py); only demand_0.35 is committed, gzipped
+demand_*.rou.xml
+calib_*.log
